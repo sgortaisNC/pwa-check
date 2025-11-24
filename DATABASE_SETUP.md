@@ -2,7 +2,9 @@
 
 ## ✅ Base de données configurée
 
-Les abonnements push sont maintenant persistés dans une base de données SQLite avec Prisma.
+Les abonnements push sont maintenant persistés dans une base de données PostgreSQL (Supabase) avec Prisma.
+
+**Voir `SUPABASE_SETUP.md` pour les instructions spécifiques à Supabase.**
 
 ## 📦 Installation
 
