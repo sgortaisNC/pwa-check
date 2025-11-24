@@ -86,54 +86,69 @@ export class NotificationService {
 			throw new Error('Les notifications n\'ont pas été autorisées');
 		}
 
-		// Utiliser le service worker si disponible (recommandé pour PWA Android)
+		// Sur Android avec PWA, on DOIT utiliser le service worker
+		// Le constructeur Notification() est interdit quand un service worker est actif
 		if ('serviceWorker' in navigator) {
-			try {
-				// Timeout de 2 secondes pour éviter que ça bloque
-				const registration = await Promise.race([
-					navigator.serviceWorker.ready,
-					new Promise<never>((_, reject) => 
-						setTimeout(() => reject(new Error('Timeout service worker')), 2000)
-					)
-				]);
-				
-				if (registration && typeof registration.showNotification === 'function') {
-					const notificationOptions: NotificationOptions = {
-						body: body || 'Notification depuis votre PWA',
-						icon: '/pwa-192x192.png',
-						badge: '/pwa-192x192.png',
-						tag: 'pwa-notification',
-						requireInteraction: false,
-						...options
-					};
-					// Ajouter vibration pour Android (propriété non standard mais supportée)
-					if ('vibrate' in navigator) {
-						(notificationOptions as any).vibrate = [200, 100, 200];
+			// Vérifier d'abord si un service worker est enregistré
+			const registrations = await navigator.serviceWorker.getRegistrations();
+			
+			if (registrations.length > 0) {
+				// Un service worker est actif, on DOIT l'utiliser (obligatoire sur Android)
+				try {
+					// Augmenter le timeout à 5 secondes pour Android
+					const registration = await Promise.race([
+						navigator.serviceWorker.ready,
+						new Promise<never>((_, reject) => 
+							setTimeout(() => reject(new Error('Timeout service worker')), 5000)
+						)
+					]);
+					
+					if (registration && typeof registration.showNotification === 'function') {
+						const notificationOptions: NotificationOptions = {
+							body: body || 'Notification depuis votre PWA',
+							icon: '/pwa-192x192.png',
+							badge: '/pwa-192x192.png',
+							tag: 'pwa-notification',
+							requireInteraction: false,
+							...options
+						};
+						// Ajouter vibration pour Android (propriété non standard mais supportée)
+						if ('vibrate' in navigator) {
+							(notificationOptions as any).vibrate = [200, 100, 200];
+						}
+						await registration.showNotification(title, notificationOptions);
+						return;
 					}
-					await registration.showNotification(title, notificationOptions);
-					return;
+				} catch (error) {
+					console.error('Erreur avec service worker:', error);
+					// Si un service worker est enregistré, on ne peut PAS utiliser Notification()
+					throw new Error('Service worker actif mais non disponible. Rechargez la page.');
 				}
-			} catch (error) {
-				console.warn('Service worker non disponible, utilisation de Notification API:', error);
 			}
 		}
 
-		// Fallback vers l'API Notification standard (fonctionne bien sur Android)
+		// Fallback uniquement si aucun service worker n'est enregistré
+		// (cas desktop sans PWA installée)
 		if ('Notification' in window && Notification.permission === 'granted') {
-			const notification = new Notification(title, {
-				body: body || 'Notification depuis votre PWA',
-				icon: '/pwa-192x192.png',
-				badge: '/pwa-192x192.png',
-				tag: 'pwa-notification',
-				...options
-			});
+			try {
+				const notification = new Notification(title, {
+					body: body || 'Notification depuis votre PWA',
+					icon: '/pwa-192x192.png',
+					badge: '/pwa-192x192.png',
+					tag: 'pwa-notification',
+					...options
+				});
 
-			notification.onclick = () => {
-				if (window.focus) {
-					window.focus();
-				}
-				notification.close();
-			};
+				notification.onclick = () => {
+					if (window.focus) {
+						window.focus();
+					}
+					notification.close();
+				};
+			} catch (error) {
+				// Si ça échoue, c'est probablement qu'un service worker est actif
+				throw new Error('Impossible d\'utiliser Notification(). Utilisez le service worker.');
+			}
 		} else {
 			throw new Error('Les notifications ne sont pas supportées ou non autorisées');
 		}
