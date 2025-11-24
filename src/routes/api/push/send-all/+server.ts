@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import webpush from 'web-push';
-import { getAllSubscriptions } from '../subscribe/+server';
+import { getAllSubscriptions } from '$lib/push-subscriptions';
 
 // Configuration VAPID (à définir dans les variables d'environnement)
 // Pour générer les clés: npx web-push generate-vapid-keys

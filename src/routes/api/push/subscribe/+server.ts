@@ -1,18 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-// Stockage en mémoire (en production, utilisez une base de données)
-const subscriptions = new Map<string, { subscription: PushSubscriptionJSON; userAgent: string; createdAt: Date }>();
-
-// Fonction pour obtenir toutes les subscriptions (exportée pour être utilisée par send-all)
-export function getAllSubscriptions() {
-	return Array.from(subscriptions.entries()).map(([id, data]) => ({
-		id,
-		subscription: data.subscription,
-		userAgent: data.userAgent,
-		createdAt: data.createdAt
-	}));
-}
+import { addSubscription, getSubscriptionCount, getSubscriptionsInfo } from '$lib/push-subscriptions';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -27,13 +15,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		                      Buffer.from(subscription.endpoint).toString('base64').substring(0, 32);
 
 		// Stocker l'abonnement
-		subscriptions.set(subscriptionId, {
-			subscription: subscription as PushSubscriptionJSON,
-			userAgent: userAgent || request.headers.get('user-agent') || 'unknown',
-			createdAt: new Date()
-		});
+		addSubscription(
+			subscriptionId,
+			subscription as PushSubscriptionJSON,
+			userAgent || request.headers.get('user-agent') || 'unknown'
+		);
 
-		console.log(`Nouvel abonnement enregistré: ${subscriptionId} (Total: ${subscriptions.size})`);
+		console.log(`Nouvel abonnement enregistré: ${subscriptionId} (Total: ${getSubscriptionCount()})`);
 
 		return json({
 			success: true,
@@ -52,12 +40,8 @@ export const POST: RequestHandler = async ({ request }) => {
 // Endpoint pour obtenir le nombre d'abonnements (pour l'admin)
 export const GET: RequestHandler = async () => {
 	return json({
-		count: subscriptions.size,
-		subscriptions: Array.from(subscriptions.entries()).map(([id, data]) => ({
-			id,
-			userAgent: data.userAgent,
-			createdAt: data.createdAt
-		}))
+		count: getSubscriptionCount(),
+		subscriptions: getSubscriptionsInfo()
 	});
 };
 
