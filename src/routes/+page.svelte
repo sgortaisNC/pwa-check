@@ -14,6 +14,11 @@
 	onMount(() => {
 		try {
 			mounted = true;
+			// Vérifier que window est disponible avant d'initialiser
+			if (typeof window === 'undefined') {
+				error = 'Window n\'est pas disponible';
+				return;
+			}
 			notificationService = NotificationService.getInstance();
 			isSupported = notificationService.isSupported();
 			permission = notificationService.getPermission();

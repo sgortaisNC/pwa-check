@@ -3,7 +3,7 @@ export class NotificationService {
 	private permission: NotificationPermission = 'default';
 
 	private constructor() {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== 'undefined' && 'Notification' in window) {
 			this.permission = Notification.permission;
 		}
 	}
@@ -17,10 +17,14 @@ export class NotificationService {
 
 	private isSecureContext(): boolean {
 		if (typeof window === 'undefined') return false;
-		return window.isSecureContext || window.location.protocol === 'https:' || 
-		       window.location.hostname === 'localhost' || 
-		       window.location.hostname === '127.0.0.1' ||
-		       window.location.hostname === '[::1]';
+		try {
+			return window.isSecureContext || window.location.protocol === 'https:' || 
+			       window.location.hostname === 'localhost' || 
+			       window.location.hostname === '127.0.0.1' ||
+			       window.location.hostname === '[::1]';
+		} catch {
+			return false;
+		}
 	}
 
 	public async requestPermission(): Promise<NotificationPermission> {
@@ -89,11 +93,15 @@ export class NotificationService {
 		if (typeof window === 'undefined') {
 			return { isSecure: false, protocol: 'unknown', hostname: 'unknown' };
 		}
-		return {
-			isSecure: this.isSecureContext(),
-			protocol: window.location.protocol,
-			hostname: window.location.hostname
-		};
+		try {
+			return {
+				isSecure: this.isSecureContext(),
+				protocol: window.location.protocol,
+				hostname: window.location.hostname
+			};
+		} catch {
+			return { isSecure: false, protocol: 'unknown', hostname: 'unknown' };
+		}
 	}
 }
 
