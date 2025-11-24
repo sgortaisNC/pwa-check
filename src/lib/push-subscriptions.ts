@@ -10,6 +10,9 @@ export async function addSubscription(
 	userAgent: string
 ): Promise<void> {
 	try {
+		// Vérifier la connexion avant d'essayer d'insérer
+		await prisma.$connect();
+		
 		await prisma.pushSubscription.upsert({
 			where: {
 				endpoint: subscription.endpoint
@@ -30,6 +33,13 @@ export async function addSubscription(
 		});
 	} catch (error) {
 		console.error('Erreur lors de l\'enregistrement de l\'abonnement:', error);
+		
+		// Si c'est une erreur de connexion, donner plus de détails
+		if (error instanceof Error && error.message.includes('Can\'t reach database server')) {
+			console.error('DATABASE_URL:', process.env.DATABASE_URL ? 'Configurée' : 'NON CONFIGURÉE');
+			throw new Error('Impossible de se connecter à la base de données. Vérifiez que DATABASE_URL est configurée dans Vercel.');
+		}
+		
 		throw error;
 	}
 }
