@@ -59,15 +59,37 @@ export class NotificationService {
 	}
 
 	public async sendNotification(title: string, options?: NotificationOptions): Promise<void> {
-		if (typeof window === 'undefined' || !('Notification' in window)) {
-			throw new Error('Les notifications ne sont pas supportées dans ce navigateur');
+		if (typeof window === 'undefined') {
+			throw new Error('Window n\'est pas disponible');
 		}
 
 		if (this.permission !== 'granted') {
 			await this.requestPermission();
 		}
 
-		if (this.permission === 'granted') {
+		if (this.permission !== 'granted') {
+			throw new Error('Les notifications n\'ont pas été autorisées');
+		}
+
+		// Utiliser le service worker si disponible (recommandé pour PWA)
+		if ('serviceWorker' in navigator) {
+			try {
+				const registration = await navigator.serviceWorker.ready;
+				await registration.showNotification(title, {
+					icon: '/pwa-192x192.png',
+					badge: '/pwa-192x192.png',
+					tag: 'test-notification',
+					requireInteraction: false,
+					...options
+				});
+				return;
+			} catch (error) {
+				console.warn('Erreur avec service worker, utilisation de Notification API:', error);
+			}
+		}
+
+		// Fallback vers l'API Notification standard si service worker non disponible
+		if ('Notification' in window) {
 			const notification = new Notification(title, {
 				icon: '/pwa-192x192.png',
 				badge: '/pwa-192x192.png',
@@ -78,6 +100,8 @@ export class NotificationService {
 				window.focus();
 				notification.close();
 			};
+		} else {
+			throw new Error('Les notifications ne sont pas supportées dans ce navigateur');
 		}
 	}
 
