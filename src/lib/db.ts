@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 
 // Singleton pour éviter plusieurs instances de PrismaClient
 let prisma: PrismaClient;
