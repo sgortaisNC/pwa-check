@@ -8,9 +8,23 @@
 
 ## 🔗 URL de connexion PostgreSQL
 
+### ⚠️ Important : Utiliser le Session Pooler pour Vercel
+
+Vercel est IPv4-only, il faut utiliser le **Session Pooler** de Supabase au lieu de la connexion directe.
+
+**Voir `SUPABASE_POOLER.md` pour les instructions détaillées.**
+
+### Connexion directe (ne fonctionne PAS avec Vercel)
 ```
 postgresql://postgres:F9feHC7cRFg0sjyR@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres
 ```
+
+### Session Pooler (à utiliser avec Vercel)
+```
+postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
+```
+
+Récupérez l'URL exacte depuis Supabase Dashboard → Settings → Database → Connection string → Session mode
 
 ## 🔑 API Key (Anon/Public)
 
