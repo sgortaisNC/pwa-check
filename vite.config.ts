@@ -53,7 +53,7 @@ export default defineConfig({
 				]
 			},
 			devOptions: {
-				enabled: true,
+				enabled: false, // Désactivé en production pour éviter les problèmes
 				type: 'module'
 			}
 		})

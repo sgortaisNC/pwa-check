@@ -2,22 +2,30 @@
 	import { onMount } from 'svelte';
 	import { NotificationService } from '$lib/notifications';
 
-	let notificationService = NotificationService.getInstance();
+	let notificationService: NotificationService | null = null;
 	let permission: NotificationPermission = 'default';
 	let isSupported = false;
 	let isLoading = false;
 	let message = '';
 	let contextInfo = { isSecure: false, protocol: '', hostname: '' };
 	let mounted = false;
+	let error: string | null = null;
 
 	onMount(() => {
-		mounted = true;
-		isSupported = notificationService.isSupported();
-		permission = notificationService.getPermission();
-		contextInfo = notificationService.getContextInfo();
+		try {
+			mounted = true;
+			notificationService = NotificationService.getInstance();
+			isSupported = notificationService.isSupported();
+			permission = notificationService.getPermission();
+			contextInfo = notificationService.getContextInfo();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Erreur inconnue';
+			console.error('Erreur lors de l\'initialisation:', e);
+		}
 	});
 
 	async function requestPermission() {
+		if (!notificationService) return;
 		isLoading = true;
 		message = '';
 		try {
@@ -27,14 +35,15 @@
 			} else {
 				message = '❌ Permissions refusées. Veuillez les autoriser dans les paramètres du navigateur.';
 			}
-		} catch (error) {
-			message = `❌ Erreur : ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+		} catch (err) {
+			message = `❌ Erreur : ${err instanceof Error ? err.message : 'Erreur inconnue'}`;
 		} finally {
 			isLoading = false;
 		}
 	}
 
 	async function testNotification() {
+		if (!notificationService) return;
 		isLoading = true;
 		message = '';
 		try {
@@ -44,8 +53,8 @@
 				requireInteraction: false
 			});
 			message = '✅ Notification envoyée !';
-		} catch (error) {
-			message = `❌ Erreur : ${error instanceof Error ? error.message : 'Erreur inconnue'}`;
+		} catch (err) {
+			message = `❌ Erreur : ${err instanceof Error ? err.message : 'Erreur inconnue'}`;
 		} finally {
 			isLoading = false;
 		}
@@ -70,27 +79,33 @@
 
 <div class="container">
 	<div class="content">
-		{#if !mounted}
+		<h1>🚀 Test PWA</h1>
+		<p class="subtitle">Application Progressive Web App avec SvelteKit</p>
+
+		{#if error}
+			<div class="alert error">
+				<strong>Erreur de chargement</strong><br />
+				{error}
+			</div>
+		{:else if !mounted}
 			<div class="loading">
 				<div class="spinner"></div>
 				<p>Chargement...</p>
 			</div>
 		{:else}
-		<h1>🚀 Test PWA</h1>
-		<p class="subtitle">Application Progressive Web App avec SvelteKit</p>
 
-		{#if !isSupported}
+		{#if notificationService && !isSupported}
 			<div class="alert error">
 				⚠️ Les notifications ne sont pas supportées dans ce navigateur.
 			</div>
-		{:else if !contextInfo.isSecure}
+		{:else if notificationService && !contextInfo.isSecure}
 			<div class="alert warning">
 				⚠️ <strong>Contexte non sécurisé</strong><br />
 				Les notifications nécessitent HTTPS ou localhost.<br />
 				<span class="context-info">Vous êtes sur : {contextInfo.protocol}//{contextInfo.hostname}</span><br />
 				<span class="help-text">En développement, utilisez <code>http://localhost:5173</code></span>
 			</div>
-		{:else}
+		{:else if notificationService}
 			<div class="card">
 				<h2>Notifications Push</h2>
 				<div class="status">
@@ -103,7 +118,7 @@
 						<button
 							class="btn btn-primary"
 							onclick={requestPermission}
-							disabled={isLoading}
+							disabled={isLoading || !notificationService}
 						>
 							{isLoading ? '⏳ Chargement...' : '🔔 Demander les permissions'}
 						</button>
@@ -111,7 +126,7 @@
 						<button
 							class="btn btn-success"
 							onclick={testNotification}
-							disabled={isLoading}
+							disabled={isLoading || !notificationService}
 						>
 							{isLoading ? '⏳ Envoi...' : '📨 Tester une notification'}
 						</button>
@@ -152,15 +167,20 @@
 	.container {
 		display: flex;
 		justify-content: center;
-		align-items: center;
+		align-items: flex-start;
 		min-height: 100vh;
 		padding: 2rem;
+		width: 100%;
+		position: relative;
+		z-index: 1;
 	}
 
 	.content {
 		max-width: 600px;
 		width: 100%;
 		text-align: center;
+		position: relative;
+		z-index: 2;
 	}
 
 	h1 {
@@ -170,6 +190,7 @@
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+		color: #667eea; /* Fallback si gradient ne fonctionne pas */
 	}
 
 	.subtitle {

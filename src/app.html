@@ -10,19 +10,35 @@
 		%sveltekit.head%
 		<style>
 			/* Styles de fallback pour éviter l'écran blanc */
-			body {
+			* {
+				box-sizing: border-box;
+			}
+			html, body {
 				margin: 0;
 				padding: 0;
+				width: 100%;
+				height: 100%;
+			}
+			body {
 				background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 				color: #e0e0e0;
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 				min-height: 100vh;
 				-webkit-font-smoothing: antialiased;
 				-moz-osx-font-smoothing: grayscale;
+				display: flex;
+				flex-direction: column;
 			}
 			/* Loading state */
 			#svelte {
 				min-height: 100vh;
+				width: 100%;
+				flex: 1;
+			}
+			/* Fallback content visible immédiatement */
+			body > div[style*="display: contents"] {
+				min-height: 100vh;
+				width: 100%;
 			}
 		</style>
 	</head>
