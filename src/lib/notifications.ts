@@ -140,7 +140,7 @@ export class NotificationService {
 							body: body || 'Notification depuis votre PWA',
 							icon: '/pwa-192x192.png',
 							badge: '/pwa-192x192.png',
-							tag: 'pwa-notification',
+							tag: `pwa-notification-${Date.now()}`, // Tag unique pour chaque notification
 							requireInteraction: false,
 							...options
 						};
@@ -177,7 +177,7 @@ export class NotificationService {
 					body: body || 'Notification depuis votre PWA',
 					icon: '/pwa-192x192.png',
 					badge: '/pwa-192x192.png',
-					tag: 'pwa-notification',
+					tag: `pwa-notification-${Date.now()}`, // Tag unique pour chaque notification
 					...options
 				});
 
