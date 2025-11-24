@@ -96,7 +96,7 @@ export class NotificationService {
 				                     document.referrer.includes('android-app://');
 				
 				// Vérifier si un service worker est enregistré
-				let registrations: ServiceWorkerRegistration[] = [];
+				let registrations: readonly ServiceWorkerRegistration[] = [];
 				try {
 					registrations = await navigator.serviceWorker.getRegistrations();
 				} catch (e) {
@@ -106,7 +106,8 @@ export class NotificationService {
 				// Essayer aussi getRegistration pour l'URL actuelle
 				let currentRegistration: ServiceWorkerRegistration | null = null;
 				try {
-					currentRegistration = await navigator.serviceWorker.getRegistration();
+					const reg = await navigator.serviceWorker.getRegistration();
+					currentRegistration = reg || null;
 				} catch (e) {
 					console.warn('Erreur getRegistration:', e);
 				}
