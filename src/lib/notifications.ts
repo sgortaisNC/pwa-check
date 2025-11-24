@@ -181,7 +181,9 @@ export class NotificationService {
 				
 				if (serverPublicKey) {
 					// Convertir la clé publique en format Uint8Array
-					options.applicationServerKey = this.urlBase64ToUint8Array(serverPublicKey);
+					const keyArray = this.urlBase64ToUint8Array(serverPublicKey);
+					// Type assertion pour compatibilité avec PushSubscriptionOptionsInit
+					(options as any).applicationServerKey = keyArray;
 				}
 
 				subscription = await registration.pushManager.subscribe(options);
