@@ -8,8 +8,10 @@
 	let isLoading = false;
 	let message = '';
 	let contextInfo = { isSecure: false, protocol: '', hostname: '' };
+	let mounted = false;
 
 	onMount(() => {
+		mounted = true;
 		isSupported = notificationService.isSupported();
 		permission = notificationService.getPermission();
 		contextInfo = notificationService.getContextInfo();
@@ -68,6 +70,12 @@
 
 <div class="container">
 	<div class="content">
+		{#if !mounted}
+			<div class="loading">
+				<div class="spinner"></div>
+				<p>Chargement...</p>
+			</div>
+		{:else}
 		<h1>🚀 Test PWA</h1>
 		<p class="subtitle">Application Progressive Web App avec SvelteKit</p>
 
@@ -126,6 +134,7 @@
 				<li>Les notifications fonctionnent même hors ligne</li>
 			</ul>
 		</div>
+		{/if}
 	</div>
 </div>
 
@@ -329,6 +338,36 @@
 		margin-bottom: 0.5rem;
 	}
 
+	.loading {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-height: 50vh;
+		gap: 1rem;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid rgba(255, 255, 255, 0.1);
+		border-top-color: #667eea;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.loading p {
+		color: #b0b0b0;
+		font-size: 1rem;
+		margin: 0;
+	}
+
 	@media (max-width: 640px) {
 		h1 {
 			font-size: 2rem;
@@ -340,6 +379,10 @@
 
 		.card {
 			padding: 1.5rem;
+		}
+
+		.container {
+			padding: 1rem;
 		}
 	}
 </style>
