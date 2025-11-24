@@ -18,15 +18,15 @@ Vercel est IPv4-only et Supabase utilise IPv6 pour les connexions directes. Il f
 
 ### 2. Format de l'URL complète
 
-L'URL complète devrait ressembler à :
+L'URL complète pour votre projet :
 ```
-postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
+postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
-**Important** : 
-- Le port est **6543** (pas 5432)
-- Le format du hostname est `postgres.[PROJECT-REF]` au lieu de `postgres`
-- Ajoutez `?pgbouncer=true` à la fin
+**Note** : 
+- Le port est **5432** (port standard pour ce pooler)
+- Le format du hostname est `postgres.[PROJECT-REF]`
+- La région est `eu-central-1`
 
 ### 3. Mettre à jour dans Vercel
 
@@ -36,15 +36,13 @@ postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-0-[region].poole
 4. Modifiez ou ajoutez `DATABASE_URL` avec l'URL du pooler
 5. Redéployez l'application
 
-## 📝 Exemple d'URL complète
-
-Une fois que vous avez récupéré l'URL du pooler depuis Supabase, elle devrait ressembler à :
+## 📝 URL complète pour votre projet
 
 ```
-postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-0-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
-(Remplacez `us-west-1` par votre région réelle)
+Cette URL est prête à être utilisée dans Vercel !
 
 ## ✅ Avantages du Pooler
 

@@ -19,12 +19,12 @@ Vercel est IPv4-only, il faut utiliser le **Session Pooler** de Supabase au lieu
 postgresql://postgres:F9feHC7cRFg0sjyR@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres
 ```
 
-### Session Pooler (à utiliser avec Vercel)
+### Session Pooler (à utiliser avec Vercel) ✅
 ```
-postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
+postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
 ```
 
-Récupérez l'URL exacte depuis Supabase Dashboard → Settings → Database → Connection string → Session mode
+Cette URL est configurée et prête à être utilisée dans Vercel.
 
 ## 🔑 API Key (Anon/Public)
 
@@ -47,8 +47,10 @@ DATABASE_URL="postgresql://postgres:F9feHC7cRFg0sjyR@db.nytelcwmramnyhdovurc.sup
 Ajoutez dans les variables d'environnement Vercel :
 
 - **Variable** : `DATABASE_URL`
-- **Valeur** : `postgresql://postgres:BEA9frkQWiSOwiZz@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres`
+- **Valeur** : `postgresql://postgres.nytelcwmramnyhdovurc:F9feHC7cRFg0sjyR@aws-1-eu-central-1.pooler.supabase.com:5432/postgres`
 - **Environments** : Production, Preview, Development
+
+⚠️ **Important** : Utilisez l'URL du **Session Pooler** (ci-dessus) et non la connexion directe, car Vercel est IPv4-only.
 
 ## ✅ Migration créée
 
