@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import webpush from 'web-push';
-import { getAllSubscriptions } from '$lib/push-subscriptions';
+import { getAllSubscriptions, removeSubscription } from '$lib/push-subscriptions';
 
 // Configuration VAPID (à définir dans les variables d'environnement)
 // Pour générer les clés: npx web-push generate-vapid-keys
@@ -30,7 +30,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		// Récupérer tous les abonnements
-		const subscriptions = getAllSubscriptions();
+		const subscriptions = await getAllSubscriptions();
 		
 		if (subscriptions.length === 0) {
 			return json({ 
@@ -58,7 +58,11 @@ export const POST: RequestHandler = async ({ request }) => {
 					return { success: true, id: sub.id };
 				} catch (error) {
 					console.error(`Erreur pour l'abonnement ${sub.id}:`, error);
-					// Si l'abonnement est invalide (410 Gone), il sera supprimé automatiquement
+					// Si l'abonnement est invalide (410 Gone), le supprimer de la base
+					if (error instanceof Error && error.message.includes('410')) {
+						await removeSubscription(sub.subscription.endpoint);
+						console.log(`Abonnement invalide supprimé: ${sub.id}`);
+					}
 					return { success: false, id: sub.id, error: error instanceof Error ? error.message : 'Erreur inconnue' };
 				}
 			})

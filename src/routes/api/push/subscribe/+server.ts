@@ -15,13 +15,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		                      Buffer.from(subscription.endpoint).toString('base64').substring(0, 32);
 
 		// Stocker l'abonnement
-		addSubscription(
+		await addSubscription(
 			subscriptionId,
 			subscription as PushSubscriptionJSON,
 			userAgent || request.headers.get('user-agent') || 'unknown'
 		);
 
-		console.log(`Nouvel abonnement enregistré: ${subscriptionId} (Total: ${getSubscriptionCount()})`);
+		const count = await getSubscriptionCount();
+		console.log(`Nouvel abonnement enregistré: ${subscriptionId} (Total: ${count})`);
 
 		return json({
 			success: true,
@@ -39,9 +40,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 // Endpoint pour obtenir le nombre d'abonnements (pour l'admin)
 export const GET: RequestHandler = async () => {
+	const count = await getSubscriptionCount();
+	const subscriptions = await getSubscriptionsInfo();
 	return json({
-		count: getSubscriptionCount(),
-		subscriptions: getSubscriptionsInfo()
+		count,
+		subscriptions
 	});
 };
 
