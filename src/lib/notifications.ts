@@ -87,14 +87,16 @@ export class NotificationService {
 
 	public isSupported(): boolean {
 		if (typeof window === 'undefined') return false;
-		// Vérifier si c'est iOS/Safari
+		// Pour Android et Desktop : utiliser l'API Notification standard
+		// Pour iOS : nécessite Web Push (non implémenté pour l'instant)
 		const isIOS = this.isIOS();
-		// iOS 16.4+ supporte Web Push via service worker
 		if (isIOS) {
-			// Vérifier si le service worker et PushManager sont disponibles
-			return 'serviceWorker' in navigator && 'PushManager' in window;
+			// iOS nécessite Web Push avec configuration serveur spécifique
+			// Pour l'instant, on retourne false pour afficher le message générique
+			return false;
 		}
-		return 'Notification' in window || ('serviceWorker' in navigator && 'PushManager' in window);
+		// Android et Desktop supportent l'API Notification standard
+		return 'Notification' in window;
 	}
 
 	public async isWebPushSupported(): Promise<boolean> {
