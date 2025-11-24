@@ -87,57 +87,64 @@
 				<strong>Erreur de chargement</strong><br />
 				{error}
 			</div>
-		{:else if !mounted}
+		{/if}
+
+		{#if !mounted}
 			<div class="loading">
 				<div class="spinner"></div>
 				<p>Chargement...</p>
 			</div>
-		{:else}
-
-		{#if notificationService && !isSupported}
-			<div class="alert error">
-				⚠️ Les notifications ne sont pas supportées dans ce navigateur.
-			</div>
-		{:else if notificationService && !contextInfo.isSecure}
-			<div class="alert warning">
-				⚠️ <strong>Contexte non sécurisé</strong><br />
-				Les notifications nécessitent HTTPS ou localhost.<br />
-				<span class="context-info">Vous êtes sur : {contextInfo.protocol}//{contextInfo.hostname}</span><br />
-				<span class="help-text">En développement, utilisez <code>http://localhost:5173</code></span>
-			</div>
 		{:else if notificationService}
-			<div class="card">
-				<h2>Notifications Push</h2>
-				<div class="status">
-					<span class="label">Statut :</span>
-					<span class="value">{getPermissionText()}</span>
+			{#if !isSupported}
+				<div class="alert error">
+					⚠️ Les notifications ne sont pas supportées dans ce navigateur.
 				</div>
+			{:else if !contextInfo.isSecure}
+				<div class="alert warning">
+					⚠️ <strong>Contexte non sécurisé</strong><br />
+					Les notifications nécessitent HTTPS ou localhost.<br />
+					<span class="context-info">Vous êtes sur : {contextInfo.protocol}//{contextInfo.hostname}</span><br />
+					<span class="help-text">En développement, utilisez <code>http://localhost:5173</code></span>
+				</div>
+			{:else}
+				<div class="card">
+					<h2>Notifications Push</h2>
+					<div class="status">
+						<span class="label">Statut :</span>
+						<span class="value">{getPermissionText()}</span>
+					</div>
 
-				<div class="actions">
-					{#if permission !== 'granted'}
-						<button
-							class="btn btn-primary"
-							onclick={requestPermission}
-							disabled={isLoading || !notificationService}
-						>
-							{isLoading ? '⏳ Chargement...' : '🔔 Demander les permissions'}
-						</button>
-					{:else}
-						<button
-							class="btn btn-success"
-							onclick={testNotification}
-							disabled={isLoading || !notificationService}
-						>
-							{isLoading ? '⏳ Envoi...' : '📨 Tester une notification'}
-						</button>
+					<div class="actions">
+						{#if permission !== 'granted'}
+							<button
+								class="btn btn-primary"
+								onclick={requestPermission}
+								disabled={isLoading || !notificationService}
+							>
+								{isLoading ? '⏳ Chargement...' : '🔔 Demander les permissions'}
+							</button>
+						{:else}
+							<button
+								class="btn btn-success"
+								onclick={testNotification}
+								disabled={isLoading || !notificationService}
+							>
+								{isLoading ? '⏳ Envoi...' : '📨 Tester une notification'}
+							</button>
+						{/if}
+					</div>
+
+					{#if message}
+						<div class="message" class:error={message.includes('❌')}>
+							{message}
+						</div>
 					{/if}
 				</div>
-
-				{#if message}
-					<div class="message" class:error={message.includes('❌')}>
-						{message}
-					</div>
-				{/if}
+			{/if}
+		{:else}
+			<div class="card">
+				<h2>Initialisation...</h2>
+				<p>Chargement des services de notification...</p>
 			</div>
 		{/if}
 
