@@ -139,8 +139,8 @@
 						<span class="value">{getPermissionText()}</span>
 					</div>
 
-					<div class="actions">
-						{#if permission !== 'granted'}
+					{#if permission !== 'granted'}
+						<div class="actions">
 							<button
 								class="btn btn-primary"
 								onclick={requestPermission}
@@ -148,16 +148,29 @@
 							>
 								{isLoading ? '⏳ Chargement...' : '🔔 Demander les permissions'}
 							</button>
-						{:else}
+						</div>
+					{:else}
+						<div class="notification-form">
+							<label for="notification-text" class="form-label">
+								💬 Message de la notification
+							</label>
+							<textarea
+								id="notification-text"
+								bind:value={notificationText}
+								placeholder="Saisissez votre message ici..."
+								class="input-textarea"
+								disabled={isLoading}
+								rows="4"
+							></textarea>
 							<button
 								class="btn btn-success"
-								onclick={testNotification}
-								disabled={isLoading || !notificationService}
+								onclick={sendNotification}
+								disabled={isLoading || !notificationService || !notificationText.trim()}
 							>
-								{isLoading ? '⏳ Envoi...' : '📨 Tester une notification'}
+								{isLoading ? '⏳ Envoi...' : '📨 Envoyer la notification'}
 							</button>
-						{/if}
-					</div>
+						</div>
+					{/if}
 
 					{#if message}
 						<div class="message" class:error={message.includes('❌')}>
