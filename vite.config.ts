@@ -8,6 +8,12 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			includeAssets: ['favicon.svg'],
+			strategies: 'injectManifest',
+			srcDir: 'src',
+			filename: 'service-worker.ts',
+			injectManifest: {
+				globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+			},
 			manifest: {
 				name: 'Test PWA SvelteKit',
 				short_name: 'Test PWA',

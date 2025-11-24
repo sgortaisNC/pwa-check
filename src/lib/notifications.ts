@@ -251,10 +251,14 @@ export class NotificationService {
 		}
 	}
 
-	// Web Push pour iOS et autres plateformes
-	public async subscribeToPush(serverPublicKey?: string): Promise<PushSubscription | null> {
+	// S'abonner aux notifications push serveur (pour recevoir des notifications à distance)
+	public async subscribeToPush(serverPublicKey: string): Promise<{ subscriptionId: string; success: boolean }> {
 		if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
 			throw new Error('Service Worker non disponible');
+		}
+
+		if (!('PushManager' in window)) {
+			throw new Error('PushManager non disponible dans ce navigateur');
 		}
 
 		try {
@@ -268,20 +272,36 @@ export class NotificationService {
 			let subscription = await registration.pushManager.getSubscription();
 			
 			if (!subscription) {
-				// Créer un nouvel abonnement
-				const options: PushSubscriptionOptionsInit = {};
-				
-				if (serverPublicKey) {
-					// Convertir la clé publique en format Uint8Array
-					const keyArray = this.urlBase64ToUint8Array(serverPublicKey);
-					// Type assertion pour compatibilité avec PushSubscriptionOptionsInit
-					(options as any).applicationServerKey = keyArray;
-				}
+				// Créer un nouvel abonnement avec la clé publique VAPID
+				const keyArray = this.urlBase64ToUint8Array(serverPublicKey);
+				const options: PushSubscriptionOptionsInit = {
+					applicationServerKey: keyArray as any,
+					userVisibleOnly: true
+				};
 
 				subscription = await registration.pushManager.subscribe(options);
 			}
 
-			return subscription;
+			// Envoyer l'abonnement au serveur pour qu'il puisse envoyer des notifications
+			const subscriptionJSON = subscription.toJSON();
+			const response = await fetch('/api/push/subscribe', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					subscription: subscriptionJSON,
+					userAgent: navigator.userAgent
+				})
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Erreur lors de l\'enregistrement de l\'abonnement');
+			}
+
+			const data = await response.json();
+			return { subscriptionId: data.subscriptionId, success: true };
 		} catch (error) {
 			console.error('Erreur lors de l\'abonnement push:', error);
 			throw error;

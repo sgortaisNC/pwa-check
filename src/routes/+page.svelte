@@ -12,8 +12,10 @@
 	let contextInfo = { isSecure: false, protocol: '', hostname: '' };
 	let mounted = false;
 	let error: string | null = null;
+	let isPushSubscribed = false;
+	let vapidPublicKey = '';
 
-	onMount(() => {
+	onMount(async () => {
 		try {
 			mounted = true;
 			// Vérifier que window est disponible avant d'initialiser
@@ -26,6 +28,23 @@
 			isIOS = notificationService.isIOS();
 			permission = notificationService.getPermission();
 			contextInfo = notificationService.getContextInfo();
+			
+			// Récupérer la clé publique VAPID depuis le serveur
+			try {
+				const response = await fetch('/api/push/vapid-key');
+				if (response.ok) {
+					const data = await response.json();
+					vapidPublicKey = data.publicKey || '';
+					// Vérifier si déjà abonné
+					if (vapidPublicKey && 'serviceWorker' in navigator && 'PushManager' in window) {
+						const registration = await navigator.serviceWorker.ready;
+						const subscription = await registration.pushManager.getSubscription();
+						isPushSubscribed = !!subscription;
+					}
+				}
+			} catch (e) {
+				console.warn('Impossible de récupérer la clé VAPID:', e);
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Erreur inconnue';
 			console.error('Erreur lors de l\'initialisation:', e);
@@ -86,6 +105,26 @@
 				return '❌ Refusées';
 			default:
 				return '⏳ En attente';
+		}
+	}
+
+	async function subscribeToPush() {
+		if (!notificationService || !vapidPublicKey) {
+			message = '❌ Clé VAPID non disponible';
+			return;
+		}
+
+		isLoading = true;
+		message = '';
+		try {
+			await notificationService.subscribeToPush(vapidPublicKey);
+			isPushSubscribed = true;
+			message = '✅ Abonnement aux notifications push réussi ! Vous recevrez maintenant les notifications envoyées depuis l\'admin.';
+		} catch (err) {
+			console.error('Erreur lors de l\'abonnement:', err);
+			message = `❌ Erreur : ${err instanceof Error ? err.message : 'Erreur inconnue'}`;
+		} finally {
+			isLoading = false;
 		}
 	}
 </script>
@@ -150,6 +189,28 @@
 							</button>
 						</div>
 					{:else}
+						{#if !isPushSubscribed && vapidPublicKey}
+							<div class="push-subscription">
+								<p class="push-info">
+									💡 <strong>Abonnez-vous aux notifications push</strong><br />
+									Recevez des notifications même quand l'application est fermée
+								</p>
+								<button
+									class="btn btn-primary"
+									onclick={subscribeToPush}
+									disabled={isLoading || !notificationService}
+								>
+									{isLoading ? '⏳ Abonnement...' : '📱 S\'abonner aux notifications push'}
+								</button>
+							</div>
+						{:else if isPushSubscribed}
+							<div class="push-subscription">
+								<p class="push-info success">
+									✅ <strong>Abonné aux notifications push</strong><br />
+									Vous recevrez les notifications envoyées depuis l'admin
+								</p>
+							</div>
+						{/if}
 						<div class="notification-form">
 							<label for="notification-text" class="form-label">
 								💬 Message de la notification
