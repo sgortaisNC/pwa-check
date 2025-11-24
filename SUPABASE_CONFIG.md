@@ -4,12 +4,12 @@
 
 - **Project URL** : https://nytelcwmramnyhdovurc.supabase.co
 - **Project Ref** : `nytelcwmramnyhdovurc`
-- **Mot de passe** : `BEA9frkQWiSOwiZz`
+- **Mot de passe** : `F9feHC7cRFg0sjyR`
 
 ## 🔗 URL de connexion PostgreSQL
 
 ```
-postgresql://postgres:BEA9frkQWiSOwiZz@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres
+postgresql://postgres:F9feHC7cRFg0sjyR@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres
 ```
 
 ## 🔑 API Key (Anon/Public)
@@ -25,7 +25,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55dGVsY3d
 ### Développement local (`.env.local`)
 
 ```env
-DATABASE_URL="postgresql://postgres:BEA9frkQWiSOwiZz@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres:F9feHC7cRFg0sjyR@db.nytelcwmramnyhdovurc.supabase.co:5432/postgres"
 ```
 
 ### Production (Vercel)
