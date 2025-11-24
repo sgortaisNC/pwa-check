@@ -50,6 +50,8 @@
 	}
 
 	async function testNotification() {
+		console.log(notificationService);
+		
 		if (!notificationService) return;
 		isLoading = true;
 		message = '';

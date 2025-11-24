@@ -75,6 +75,10 @@ export class NotificationService {
 		if ('serviceWorker' in navigator) {
 			try {
 				const registration = await navigator.serviceWorker.ready;
+				if (!registration) {
+					throw new Error('Service worker non disponible');
+				}
+				
 				await registration.showNotification(title, {
 					icon: '/pwa-192x192.png',
 					badge: '/pwa-192x192.png',
@@ -85,23 +89,32 @@ export class NotificationService {
 				return;
 			} catch (error) {
 				console.warn('Erreur avec service worker, utilisation de Notification API:', error);
+				// Ne pas retourner ici, continuer vers le fallback
 			}
 		}
 
-		// Fallback vers l'API Notification standard si service worker non disponible
-		if ('Notification' in window) {
-			const notification = new Notification(title, {
-				icon: '/pwa-192x192.png',
-				badge: '/pwa-192x192.png',
-				...options
-			});
+		// Fallback vers l'API Notification standard si service worker non disponible ou échoué
+		if ('Notification' in window && Notification.permission === 'granted') {
+			try {
+				const notification = new Notification(title, {
+					icon: '/pwa-192x192.png',
+					badge: '/pwa-192x192.png',
+					...options
+				});
 
-			notification.onclick = () => {
-				window.focus();
-				notification.close();
-			};
+				notification.onclick = () => {
+					if (window.focus) {
+						window.focus();
+					}
+					notification.close();
+				};
+				return;
+			} catch (error) {
+				console.error('Erreur avec Notification API:', error);
+				throw new Error(`Impossible d'afficher la notification: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+			}
 		} else {
-			throw new Error('Les notifications ne sont pas supportées dans ce navigateur');
+			throw new Error('Les notifications ne sont pas supportées ou non autorisées dans ce navigateur');
 		}
 	}
 
