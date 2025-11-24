@@ -1,15 +1,23 @@
 /// <reference lib="webworker" />
 
 import { clientsClaim } from 'workbox-core';
-import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Le manifest sera injecté automatiquement par Workbox
+// @ts-ignore
+const manifest = self.__WB_MANIFEST || [];
+
 // Precache tous les fichiers générés par Vite
-precacheAndRoute(self.__WB_MANIFEST);
+if (Array.isArray(manifest) && manifest.length > 0) {
+	precacheAndRoute(manifest);
+} else {
+	// Fallback si le manifest n'est pas disponible
+	console.warn('Service Worker: Manifest non disponible');
+}
 
 // Gérer les événements push (notifications serveur)
 self.addEventListener('push', (event: PushEvent) => {
@@ -44,6 +52,16 @@ self.addEventListener('push', (event: PushEvent) => {
 		);
 	} catch (error) {
 		console.error('Erreur lors du traitement du push:', error);
+		// Essayer d'afficher une notification basique même si le parsing échoue
+		const title = 'Notification PWA';
+		const body = event.data?.text() || 'Vous avez une nouvelle notification';
+		event.waitUntil(
+			self.registration.showNotification(title, {
+				body,
+				icon: '/pwa-192x192.png',
+				badge: '/pwa-192x192.png'
+			})
+		);
 	}
 });
 
@@ -59,7 +77,7 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
 			// Si une fenêtre est déjà ouverte, la focus
 			for (const client of clientList) {
 				if (client.url === '/' && 'focus' in client) {
-					return client.focus();
+					return (client as WindowClient).focus();
 				}
 			}
 			// Sinon, ouvrir une nouvelle fenêtre
@@ -77,4 +95,3 @@ self.addEventListener('notificationclose', (event: NotificationEvent) => {
 
 // Prendre le contrôle immédiatement
 clientsClaim();
-

@@ -56,7 +56,13 @@ export default defineConfig({
 							}
 						}
 					}
-				]
+				],
+				// Gérer les événements push dans le service worker généré
+				skipWaiting: true,
+				clientsClaim: true
+			},
+			injectManifest: {
+				globPatterns: ['**/*.{js,css,html,ico,png,svg}']
 			},
 			devOptions: {
 				enabled: false, // Désactivé en production pour éviter les problèmes
