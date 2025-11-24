@@ -156,7 +156,6 @@
 				<li>Les notifications fonctionnent même hors ligne</li>
 			</ul>
 		</div>
-		{/if}
 	</div>
 </div>
 
