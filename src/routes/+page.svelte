@@ -105,13 +105,16 @@
 			{#if !isSupported}
 				<div class="alert warning">
 					{#if isIOS}
-						<strong>📱 Limitations iOS/Safari</strong><br />
-						Safari sur iOS ne supporte pas l'API Notification standard utilisée par cette application.<br />
+						<strong>📱 Web Push pour iOS</strong><br />
+						Les notifications push web sont disponibles sur iOS 16.4+ via le service worker.<br />
 						<br />
-						<strong>Alternatives :</strong><br />
-						• Utilisez Chrome ou Firefox sur iOS pour tester les notifications<br />
-						• Les notifications push web nécessitent une configuration serveur spécifique pour iOS<br />
-						• Pour une expérience complète, testez sur Android ou desktop
+						<strong>Prérequis :</strong><br />
+						• iOS 16.4 ou supérieur<br />
+						• Application installée comme PWA (ajoutée à l'écran d'accueil)<br />
+						• Configuration serveur avec certificat APNs<br />
+						<br />
+						<strong>Pour activer :</strong><br />
+						Configurez votre serveur backend avec les certificats APNs (voir IOS_PUSH_SETUP.md)
 					{:else}
 						⚠️ Les notifications ne sont pas supportées dans ce navigateur.
 					{/if}

@@ -87,12 +87,26 @@ export class NotificationService {
 
 	public isSupported(): boolean {
 		if (typeof window === 'undefined') return false;
-		// Vérifier si c'est iOS/Safari qui a un support limité
-		const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-		              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-		// iOS Safari ne supporte pas l'API Notification standard
-		if (isIOS) return false;
-		return 'Notification' in window;
+		// Vérifier si c'est iOS/Safari
+		const isIOS = this.isIOS();
+		// iOS 16.4+ supporte Web Push via service worker
+		if (isIOS) {
+			// Vérifier si le service worker et PushManager sont disponibles
+			return 'serviceWorker' in navigator && 'PushManager' in window;
+		}
+		return 'Notification' in window || ('serviceWorker' in navigator && 'PushManager' in window);
+	}
+
+	public async isWebPushSupported(): Promise<boolean> {
+		if (typeof window === 'undefined') return false;
+		if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+		
+		try {
+			const registration = await navigator.serviceWorker.ready;
+			return registration.pushManager !== undefined;
+		} catch {
+			return false;
+		}
 	}
 
 	public isIOS(): boolean {
@@ -114,6 +128,73 @@ export class NotificationService {
 		} catch {
 			return { isSecure: false, protocol: 'unknown', hostname: 'unknown' };
 		}
+	}
+
+	// Web Push pour iOS et autres plateformes
+	public async subscribeToPush(serverPublicKey?: string): Promise<PushSubscription | null> {
+		if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+			throw new Error('Service Worker non disponible');
+		}
+
+		try {
+			const registration = await navigator.serviceWorker.ready;
+			
+			if (!registration.pushManager) {
+				throw new Error('PushManager non disponible');
+			}
+
+			// Vérifier si déjà abonné
+			let subscription = await registration.pushManager.getSubscription();
+			
+			if (!subscription) {
+				// Créer un nouvel abonnement
+				const options: PushSubscriptionOptionsInit = {};
+				
+				if (serverPublicKey) {
+					// Convertir la clé publique en format Uint8Array
+					options.applicationServerKey = this.urlBase64ToUint8Array(serverPublicKey);
+				}
+
+				subscription = await registration.pushManager.subscribe(options);
+			}
+
+			return subscription;
+		} catch (error) {
+			console.error('Erreur lors de l\'abonnement push:', error);
+			throw error;
+		}
+	}
+
+	public async unsubscribeFromPush(): Promise<boolean> {
+		if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+			return false;
+		}
+
+		try {
+			const registration = await navigator.serviceWorker.ready;
+			const subscription = await registration.pushManager.getSubscription();
+			
+			if (subscription) {
+				await subscription.unsubscribe();
+				return true;
+			}
+			return false;
+		} catch (error) {
+			console.error('Erreur lors du désabonnement:', error);
+			return false;
+		}
+	}
+
+	private urlBase64ToUint8Array(base64String: string): Uint8Array {
+		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const rawData = window.atob(base64);
+		const outputArray = new Uint8Array(rawData.length);
+
+		for (let i = 0; i < rawData.length; ++i) {
+			outputArray[i] = rawData.charCodeAt(i);
+		}
+		return outputArray;
 	}
 }
 

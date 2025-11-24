@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.p8
+*.pem
+*.key
+AuthKey.p8
+.DS_Store
+*.log
+
