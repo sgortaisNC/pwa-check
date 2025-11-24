@@ -89,19 +89,51 @@ export class NotificationService {
 		// Sur Android avec PWA, on DOIT utiliser le service worker
 		// Le constructeur Notification() est interdit quand un service worker est actif
 		if ('serviceWorker' in navigator) {
-			// Vérifier d'abord si un service worker est enregistré
-			const registrations = await navigator.serviceWorker.getRegistrations();
-			
-			if (registrations.length > 0) {
-				// Un service worker est actif, on DOIT l'utiliser (obligatoire sur Android)
-				try {
-					// Augmenter le timeout à 5 secondes pour Android
-					const registration = await Promise.race([
-						navigator.serviceWorker.ready,
-						new Promise<never>((_, reject) => 
-							setTimeout(() => reject(new Error('Timeout service worker')), 5000)
-						)
-					]);
+			try {
+				// Vérifier d'abord si un service worker est enregistré
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				
+				// Si un service worker est enregistré OU si on est dans un contexte PWA
+				// (standalone mode), on DOIT utiliser le service worker
+				const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+				                     (window.navigator as any).standalone === true ||
+				                     document.referrer.includes('android-app://');
+				
+				if (registrations.length > 0 || isStandalone) {
+					// Un service worker est actif ou on est en mode PWA, on DOIT l'utiliser
+					// Attendre que le service worker soit prêt avec un timeout plus long
+					let registration: ServiceWorkerRegistration | null = null;
+					
+					try {
+						registration = await Promise.race([
+							navigator.serviceWorker.ready,
+							new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+								// Si ready ne se résout pas rapidement, essayer getRegistration
+								setTimeout(async () => {
+									try {
+										const regs = await navigator.serviceWorker.getRegistrations();
+										if (regs.length > 0) {
+											resolve(regs[0]);
+										} else {
+											reject(new Error('Aucun service worker trouvé'));
+										}
+									} catch (e) {
+										reject(e);
+									}
+								}, 1000);
+								
+								// Timeout final après 10 secondes
+								setTimeout(() => reject(new Error('Timeout service worker')), 10000);
+							})
+						]);
+					} catch (error) {
+						console.error('Erreur lors de l\'attente du service worker:', error);
+						// Essayer quand même avec getRegistrations
+						const regs = await navigator.serviceWorker.getRegistrations();
+						if (regs.length > 0) {
+							registration = regs[0];
+						}
+					}
 					
 					if (registration && typeof registration.showNotification === 'function') {
 						const notificationOptions: NotificationOptions = {
@@ -118,18 +150,28 @@ export class NotificationService {
 						}
 						await registration.showNotification(title, notificationOptions);
 						return;
+					} else {
+						throw new Error('Service worker enregistré mais showNotification non disponible');
 					}
-				} catch (error) {
-					console.error('Erreur avec service worker:', error);
-					// Si un service worker est enregistré, on ne peut PAS utiliser Notification()
-					throw new Error('Service worker actif mais non disponible. Rechargez la page.');
 				}
+			} catch (error) {
+				console.error('Erreur avec service worker:', error);
+				// Si on est en mode standalone ou qu'un service worker est enregistré,
+				// on ne peut PAS utiliser Notification()
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+				
+				if (registrations.length > 0 || isStandalone) {
+					throw new Error('Service worker requis mais non disponible. Rechargez la page et réessayez.');
+				}
+				// Sinon, continuer vers le fallback
 			}
 		}
 
-		// Fallback uniquement si aucun service worker n'est enregistré
+		// Fallback uniquement si aucun service worker n'est enregistré ET qu'on n'est pas en mode PWA
 		// (cas desktop sans PWA installée)
-		if ('Notification' in window && Notification.permission === 'granted') {
+		const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+		if (!isStandalone && 'Notification' in window && Notification.permission === 'granted') {
 			try {
 				const notification = new Notification(title, {
 					body: body || 'Notification depuis votre PWA',
@@ -145,12 +187,13 @@ export class NotificationService {
 					}
 					notification.close();
 				};
+				return;
 			} catch (error) {
 				// Si ça échoue, c'est probablement qu'un service worker est actif
-				throw new Error('Impossible d\'utiliser Notification(). Utilisez le service worker.');
+				throw new Error('Impossible d\'utiliser Notification(). Le service worker est requis.');
 			}
 		} else {
-			throw new Error('Les notifications ne sont pas supportées ou non autorisées');
+			throw new Error('Les notifications nécessitent le service worker. Rechargez la page.');
 		}
 	}
 
