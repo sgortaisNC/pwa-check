@@ -90,122 +90,102 @@ export class NotificationService {
 		// Le constructeur Notification() est interdit quand un service worker est actif
 		if ('serviceWorker' in navigator) {
 			try {
-				// Vérifier d'abord si un service worker est enregistré
-				const registrations = await navigator.serviceWorker.getRegistrations();
-				
-				// Si un service worker est enregistré OU si on est dans un contexte PWA
-				// (standalone mode), on DOIT utiliser le service worker
+				// Vérifier si on est dans un contexte PWA (standalone mode)
 				const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
 				                     (window.navigator as any).standalone === true ||
 				                     document.referrer.includes('android-app://');
 				
-				if (registrations.length > 0 || isStandalone) {
+				// Vérifier si un service worker est enregistré
+				let registrations: ServiceWorkerRegistration[] = [];
+				try {
+					registrations = await navigator.serviceWorker.getRegistrations();
+				} catch (e) {
+					console.warn('Erreur getRegistrations:', e);
+				}
+				
+				// Essayer aussi getRegistration pour l'URL actuelle
+				let currentRegistration: ServiceWorkerRegistration | null = null;
+				try {
+					currentRegistration = await navigator.serviceWorker.getRegistration();
+				} catch (e) {
+					console.warn('Erreur getRegistration:', e);
+				}
+				
+				// Si un service worker est enregistré OU si on est en mode PWA
+				if (registrations.length > 0 || currentRegistration || isStandalone) {
 					// Un service worker est actif ou on est en mode PWA, on DOIT l'utiliser
-					// Attendre que le service worker soit prêt avec plusieurs tentatives
-					let registration: ServiceWorkerRegistration | null = null;
+					let registration: ServiceWorkerRegistration | null = currentRegistration || null;
 					
-					// Tentative 1: Utiliser ready (le plus rapide)
-					try {
-						registration = await Promise.race([
-							navigator.serviceWorker.ready,
-							new Promise<never>((_, reject) => 
-								setTimeout(() => reject(new Error('Timeout ready')), 3000)
-							)
-						]);
-					} catch (error) {
-						console.warn('ready a échoué, tentative avec getRegistrations:', error);
+					// Si pas de registration actuelle, utiliser la première disponible
+					if (!registration && registrations.length > 0) {
+						registration = registrations[0];
 					}
 					
-					// Tentative 2: Utiliser getRegistrations si ready a échoué
+					// Si toujours pas de registration, essayer ready
 					if (!registration) {
 						try {
-							const regs = await navigator.serviceWorker.getRegistrations();
-							if (regs.length > 0) {
-								registration = regs[0];
-								// Attendre que ce service worker soit actif
-								if (registration.active) {
-									// Service worker déjà actif, on peut l'utiliser
-								} else if (registration.installing) {
-									// Service worker en cours d'installation, attendre
-									await new Promise<void>((resolve) => {
-										const worker = registration!.installing;
-										if (worker) {
-											worker.addEventListener('statechange', () => {
-												if (worker.state === 'activated') {
-													resolve();
-												}
-											});
-											// Timeout après 5 secondes
-											setTimeout(() => resolve(), 5000);
-										} else {
-											resolve();
-										}
-									});
-								} else if (registration.waiting) {
-									// Service worker en attente, l'activer
-									registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-									await new Promise<void>((resolve) => setTimeout(resolve, 1000));
-								}
-							}
-						} catch (error) {
-							console.error('Erreur avec getRegistrations:', error);
-						}
-					}
-					
-					// Tentative 3: Attendre un peu plus et réessayer ready
-					if (!registration) {
-						try {
-							await new Promise(resolve => setTimeout(resolve, 2000));
 							registration = await Promise.race([
 								navigator.serviceWorker.ready,
 								new Promise<never>((_, reject) => 
-									setTimeout(() => reject(new Error('Timeout final')), 5000)
+									setTimeout(() => reject(new Error('Timeout')), 5000)
 								)
 							]);
 						} catch (error) {
-							console.error('Tentative finale échouée:', error);
+							console.warn('ready a échoué:', error);
 						}
 					}
 					
-					if (registration && typeof registration.showNotification === 'function') {
-						const notificationOptions: NotificationOptions = {
-							body: body || 'Notification depuis votre PWA',
-							icon: '/pwa-192x192.png',
-							badge: '/pwa-192x192.png',
-							tag: `pwa-notification-${Date.now()}`, // Tag unique pour chaque notification
-							requireInteraction: false,
-							...options
-						};
-						// Ajouter vibration pour Android (propriété non standard mais supportée)
-						if ('vibrate' in navigator) {
-							(notificationOptions as any).vibrate = [200, 100, 200];
-						}
-						await registration.showNotification(title, notificationOptions);
-						return;
-					} else {
-						// Dernière tentative: vérifier si on peut utiliser getRegistration avec l'URL actuelle
-						try {
-							const reg = await navigator.serviceWorker.getRegistration();
-							if (reg && typeof reg.showNotification === 'function') {
-								const notificationOptions: NotificationOptions = {
-									body: body || 'Notification depuis votre PWA',
-									icon: '/pwa-192x192.png',
-									badge: '/pwa-192x192.png',
-									tag: `pwa-notification-${Date.now()}`,
-									requireInteraction: false,
-									...options
+					// Vérifier et attendre que le service worker soit actif
+					if (registration) {
+						// Si le service worker est en cours d'installation, attendre
+						if (registration.installing) {
+							await new Promise<void>((resolve) => {
+								const worker = registration!.installing!;
+								const checkState = () => {
+									if (worker.state === 'activated' || worker.state === 'redundant') {
+										resolve();
+									} else {
+										setTimeout(checkState, 100);
+									}
 								};
-								if ('vibrate' in navigator) {
-									(notificationOptions as any).vibrate = [200, 100, 200];
-								}
-								await reg.showNotification(title, notificationOptions);
-								return;
-							}
-						} catch (error) {
-							console.error('Dernière tentative échouée:', error);
+								worker.addEventListener('statechange', checkState);
+								setTimeout(() => resolve(), 5000); // Timeout de sécurité
+							});
 						}
-						throw new Error('Service worker enregistré mais showNotification non disponible. Essayez de recharger la page.');
+						
+						// Si le service worker est en attente, essayer de l'activer
+						if (registration.waiting && !registration.active) {
+							try {
+								registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+								await new Promise<void>(resolve => setTimeout(resolve, 1000));
+							} catch (e) {
+								console.warn('Impossible d\'activer le service worker en attente:', e);
+							}
+						}
+						
+						// Utiliser le service worker actif ou celui en attente
+						const activeWorker = registration.active || registration.waiting;
+						
+						if (activeWorker && typeof registration.showNotification === 'function') {
+							const notificationOptions: NotificationOptions = {
+								body: body || 'Notification depuis votre PWA',
+								icon: '/pwa-192x192.png',
+								badge: '/pwa-192x192.png',
+								tag: `pwa-notification-${Date.now()}`,
+								requireInteraction: false,
+								...options
+							};
+							// Ajouter vibration pour Android
+							if ('vibrate' in navigator) {
+								(notificationOptions as any).vibrate = [200, 100, 200];
+							}
+							await registration.showNotification(title, notificationOptions);
+							return;
+						}
 					}
+					
+					// Si on arrive ici, le service worker n'est pas utilisable
+					throw new Error('Service worker trouvé mais non actif. Rechargez la page complètement.');
 				}
 			} catch (error) {
 				console.error('Erreur avec service worker:', error);
