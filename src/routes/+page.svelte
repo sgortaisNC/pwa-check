@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { NotificationService } from '$lib/notifications';
-	import InstallBanner from '$components/InstallBanner.svelte';
+	import InstallBanner from '../components/InstallBanner.svelte';
 
 	let notificationService: NotificationService | null = null;
 	let permission: NotificationPermission = 'default';
