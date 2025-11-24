@@ -98,15 +98,19 @@ export class NotificationService {
 				]);
 				
 				if (registration && typeof registration.showNotification === 'function') {
-					await registration.showNotification(title, {
+					const notificationOptions: NotificationOptions = {
 						body: body || 'Notification depuis votre PWA',
 						icon: '/pwa-192x192.png',
 						badge: '/pwa-192x192.png',
 						tag: 'pwa-notification',
 						requireInteraction: false,
-						vibrate: [200, 100, 200], // Vibration pour Android
 						...options
-					});
+					};
+					// Ajouter vibration pour Android (propriété non standard mais supportée)
+					if ('vibrate' in navigator) {
+						(notificationOptions as any).vibrate = [200, 100, 200];
+					}
+					await registration.showNotification(title, notificationOptions);
 					return;
 				}
 			} catch (error) {
