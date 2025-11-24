@@ -50,9 +50,10 @@
 	}
 
 	async function testNotification() {
-		console.log(notificationService);
-		
-		if (!notificationService) return;
+		if (!notificationService) {
+			message = '❌ Service de notifications non disponible';
+			return;
+		}
 		isLoading = true;
 		message = '';
 		try {
@@ -63,6 +64,7 @@
 			});
 			message = '✅ Notification envoyée !';
 		} catch (err) {
+			console.error('Erreur lors de l\'envoi de la notification:', err);
 			message = `❌ Erreur : ${err instanceof Error ? err.message : 'Erreur inconnue'}`;
 		} finally {
 			isLoading = false;
