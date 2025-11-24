@@ -8,6 +8,20 @@ export class NotificationService {
 		}
 	}
 
+	// Vérifier si les notifications sont supportées (Android optimisé)
+	public isSupported(): boolean {
+		if (typeof window === 'undefined') return false;
+		// Android supporte l'API Notification standard
+		return 'Notification' in window;
+	}
+
+	// Vérifier si c'est iOS (pour afficher un message spécifique)
+	public isIOS(): boolean {
+		if (typeof window === 'undefined') return false;
+		return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+		       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	}
+
 	public static getInstance(): NotificationService {
 		if (!NotificationService.instance) {
 			NotificationService.instance = new NotificationService();
@@ -58,7 +72,8 @@ export class NotificationService {
 		}
 	}
 
-	public async sendNotification(title: string, options?: NotificationOptions): Promise<void> {
+	// Envoyer une notification (optimisé pour Android)
+	public async sendNotification(title: string, body: string, options?: NotificationOptions): Promise<void> {
 		if (typeof window === 'undefined') {
 			throw new Error('Window n\'est pas disponible');
 		}
@@ -71,57 +86,52 @@ export class NotificationService {
 			throw new Error('Les notifications n\'ont pas été autorisées');
 		}
 
-		// Utiliser le service worker si disponible (recommandé pour PWA)
+		// Utiliser le service worker si disponible (recommandé pour PWA Android)
 		if ('serviceWorker' in navigator) {
 			try {
-				// Timeout de 3 secondes pour éviter que ça bloque indéfiniment
+				// Timeout de 2 secondes pour éviter que ça bloque
 				const registration = await Promise.race([
 					navigator.serviceWorker.ready,
 					new Promise<never>((_, reject) => 
-						setTimeout(() => reject(new Error('Timeout service worker')), 3000)
+						setTimeout(() => reject(new Error('Timeout service worker')), 2000)
 					)
 				]);
 				
-				if (!registration || typeof registration.showNotification !== 'function') {
-					throw new Error('Service worker non disponible');
+				if (registration && typeof registration.showNotification === 'function') {
+					await registration.showNotification(title, {
+						body: body || 'Notification depuis votre PWA',
+						icon: '/pwa-192x192.png',
+						badge: '/pwa-192x192.png',
+						tag: 'pwa-notification',
+						requireInteraction: false,
+						vibrate: [200, 100, 200], // Vibration pour Android
+						...options
+					});
+					return;
 				}
-				
-				await registration.showNotification(title, {
-					icon: '/pwa-192x192.png',
-					badge: '/pwa-192x192.png',
-					tag: 'test-notification',
-					requireInteraction: false,
-					...options
-				});
-				return;
 			} catch (error) {
-				console.warn('Erreur avec service worker, utilisation de Notification API:', error);
-				// Ne pas retourner ici, continuer vers le fallback
+				console.warn('Service worker non disponible, utilisation de Notification API:', error);
 			}
 		}
 
-		// Fallback vers l'API Notification standard si service worker non disponible ou échoué
+		// Fallback vers l'API Notification standard (fonctionne bien sur Android)
 		if ('Notification' in window && Notification.permission === 'granted') {
-			try {
-				const notification = new Notification(title, {
-					icon: '/pwa-192x192.png',
-					badge: '/pwa-192x192.png',
-					...options
-				});
+			const notification = new Notification(title, {
+				body: body || 'Notification depuis votre PWA',
+				icon: '/pwa-192x192.png',
+				badge: '/pwa-192x192.png',
+				tag: 'pwa-notification',
+				...options
+			});
 
-				notification.onclick = () => {
-					if (window.focus) {
-						window.focus();
-					}
-					notification.close();
-				};
-				return;
-			} catch (error) {
-				console.error('Erreur avec Notification API:', error);
-				throw new Error(`Impossible d'afficher la notification: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
-			}
+			notification.onclick = () => {
+				if (window.focus) {
+					window.focus();
+				}
+				notification.close();
+			};
 		} else {
-			throw new Error('Les notifications ne sont pas supportées ou non autorisées dans ce navigateur');
+			throw new Error('Les notifications ne sont pas supportées ou non autorisées');
 		}
 	}
 
@@ -129,37 +139,6 @@ export class NotificationService {
 		return this.permission;
 	}
 
-	public isSupported(): boolean {
-		if (typeof window === 'undefined') return false;
-		// Pour Android et Desktop : utiliser l'API Notification standard
-		// Pour iOS : nécessite Web Push (non implémenté pour l'instant)
-		const isIOS = this.isIOS();
-		if (isIOS) {
-			// iOS nécessite Web Push avec configuration serveur spécifique
-			// Pour l'instant, on retourne false pour afficher le message générique
-			return false;
-		}
-		// Android et Desktop supportent l'API Notification standard
-		return 'Notification' in window;
-	}
-
-	public async isWebPushSupported(): Promise<boolean> {
-		if (typeof window === 'undefined') return false;
-		if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-		
-		try {
-			const registration = await navigator.serviceWorker.ready;
-			return registration.pushManager !== undefined;
-		} catch {
-			return false;
-		}
-	}
-
-	public isIOS(): boolean {
-		if (typeof window === 'undefined') return false;
-		return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-		       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-	}
 
 	public getContextInfo(): { isSecure: boolean; protocol: string; hostname: string } {
 		if (typeof window === 'undefined') {

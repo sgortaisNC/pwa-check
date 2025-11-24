@@ -8,6 +8,7 @@
 	let isIOS = false;
 	let isLoading = false;
 	let message = '';
+	let notificationText = '';
 	let contextInfo = { isSecure: false, protocol: '', hostname: '' };
 	let mounted = false;
 	let error: string | null = null;
@@ -49,20 +50,26 @@
 		}
 	}
 
-	async function testNotification() {
+	async function sendNotification() {
 		if (!notificationService) {
 			message = '❌ Service de notifications non disponible';
 			return;
 		}
+
+		if (!notificationText.trim()) {
+			message = '⚠️ Veuillez saisir un message';
+			return;
+		}
+
 		isLoading = true;
 		message = '';
 		try {
-			await notificationService.sendNotification('🎉 Notification de test !', {
-				body: 'Ceci est une notification de test depuis votre PWA.',
-				tag: 'test-notification',
-				requireInteraction: false
-			});
+			await notificationService.sendNotification(
+				'📨 Notification PWA',
+				notificationText.trim()
+			);
 			message = '✅ Notification envoyée !';
+			notificationText = ''; // Réinitialiser le champ après envoi
 		} catch (err) {
 			console.error('Erreur lors de l\'envoi de la notification:', err);
 			message = `❌ Erreur : ${err instanceof Error ? err.message : 'Erreur inconnue'}`;
@@ -309,6 +316,55 @@
 	.message.error {
 		background: rgba(239, 68, 68, 0.2);
 		border-color: rgba(239, 68, 68, 0.3);
+	}
+
+	.message.warning {
+		background: rgba(255, 193, 7, 0.2);
+		border-color: rgba(255, 193, 7, 0.3);
+		color: #ffc107;
+	}
+
+	.notification-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.form-label {
+		font-weight: 600;
+		color: #fff;
+		font-size: 1rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.input-textarea {
+		width: 100%;
+		padding: 1rem;
+		border-radius: 8px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: rgba(0, 0, 0, 0.3);
+		color: #e0e0e0;
+		font-family: inherit;
+		font-size: 1rem;
+		resize: vertical;
+		min-height: 100px;
+		transition: all 0.3s ease;
+	}
+
+	.input-textarea:focus {
+		outline: none;
+		border-color: #667eea;
+		background: rgba(0, 0, 0, 0.4);
+		box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+	}
+
+	.input-textarea:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.input-textarea::placeholder {
+		color: #888;
 	}
 
 	.alert {
