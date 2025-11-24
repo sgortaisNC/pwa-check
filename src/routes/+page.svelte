@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { NotificationService } from '$lib/notifications';
+	import InstallBanner from '$components/InstallBanner.svelte';
 
 	let notificationService: NotificationService | null = null;
 	let permission: NotificationPermission = 'default';
@@ -133,6 +134,8 @@
 	<title>Test PWA - SvelteKit</title>
 	<meta name="description" content="Application PWA de test avec notifications push" />
 </svelte:head>
+
+<InstallBanner />
 
 <div class="container">
 	<div class="content">
