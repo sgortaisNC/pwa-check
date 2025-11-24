@@ -101,37 +101,69 @@ export class NotificationService {
 				
 				if (registrations.length > 0 || isStandalone) {
 					// Un service worker est actif ou on est en mode PWA, on DOIT l'utiliser
-					// Attendre que le service worker soit prêt avec un timeout plus long
+					// Attendre que le service worker soit prêt avec plusieurs tentatives
 					let registration: ServiceWorkerRegistration | null = null;
 					
+					// Tentative 1: Utiliser ready (le plus rapide)
 					try {
 						registration = await Promise.race([
 							navigator.serviceWorker.ready,
-							new Promise<ServiceWorkerRegistration>((resolve, reject) => {
-								// Si ready ne se résout pas rapidement, essayer getRegistration
-								setTimeout(async () => {
-									try {
-										const regs = await navigator.serviceWorker.getRegistrations();
-										if (regs.length > 0) {
-											resolve(regs[0]);
-										} else {
-											reject(new Error('Aucun service worker trouvé'));
-										}
-									} catch (e) {
-										reject(e);
-									}
-								}, 1000);
-								
-								// Timeout final après 10 secondes
-								setTimeout(() => reject(new Error('Timeout service worker')), 10000);
-							})
+							new Promise<never>((_, reject) => 
+								setTimeout(() => reject(new Error('Timeout ready')), 3000)
+							)
 						]);
 					} catch (error) {
-						console.error('Erreur lors de l\'attente du service worker:', error);
-						// Essayer quand même avec getRegistrations
-						const regs = await navigator.serviceWorker.getRegistrations();
-						if (regs.length > 0) {
-							registration = regs[0];
+						console.warn('ready a échoué, tentative avec getRegistrations:', error);
+					}
+					
+					// Tentative 2: Utiliser getRegistrations si ready a échoué
+					if (!registration) {
+						try {
+							const regs = await navigator.serviceWorker.getRegistrations();
+							if (regs.length > 0) {
+								registration = regs[0];
+								// Attendre que ce service worker soit actif
+								if (registration.active) {
+									// Service worker déjà actif, on peut l'utiliser
+								} else if (registration.installing) {
+									// Service worker en cours d'installation, attendre
+									await new Promise<void>((resolve) => {
+										const worker = registration!.installing;
+										if (worker) {
+											worker.addEventListener('statechange', () => {
+												if (worker.state === 'activated') {
+													resolve();
+												}
+											});
+											// Timeout après 5 secondes
+											setTimeout(() => resolve(), 5000);
+										} else {
+											resolve();
+										}
+									});
+								} else if (registration.waiting) {
+									// Service worker en attente, l'activer
+									registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+									await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+								}
+							}
+						} catch (error) {
+							console.error('Erreur avec getRegistrations:', error);
+						}
+					}
+					
+					// Tentative 3: Attendre un peu plus et réessayer ready
+					if (!registration) {
+						try {
+							await new Promise(resolve => setTimeout(resolve, 2000));
+							registration = await Promise.race([
+								navigator.serviceWorker.ready,
+								new Promise<never>((_, reject) => 
+									setTimeout(() => reject(new Error('Timeout final')), 5000)
+								)
+							]);
+						} catch (error) {
+							console.error('Tentative finale échouée:', error);
 						}
 					}
 					
@@ -151,7 +183,28 @@ export class NotificationService {
 						await registration.showNotification(title, notificationOptions);
 						return;
 					} else {
-						throw new Error('Service worker enregistré mais showNotification non disponible');
+						// Dernière tentative: vérifier si on peut utiliser getRegistration avec l'URL actuelle
+						try {
+							const reg = await navigator.serviceWorker.getRegistration();
+							if (reg && typeof reg.showNotification === 'function') {
+								const notificationOptions: NotificationOptions = {
+									body: body || 'Notification depuis votre PWA',
+									icon: '/pwa-192x192.png',
+									badge: '/pwa-192x192.png',
+									tag: `pwa-notification-${Date.now()}`,
+									requireInteraction: false,
+									...options
+								};
+								if ('vibrate' in navigator) {
+									(notificationOptions as any).vibrate = [200, 100, 200];
+								}
+								await reg.showNotification(title, notificationOptions);
+								return;
+							}
+						} catch (error) {
+							console.error('Dernière tentative échouée:', error);
+						}
+						throw new Error('Service worker enregistré mais showNotification non disponible. Essayez de recharger la page.');
 					}
 				}
 			} catch (error) {
