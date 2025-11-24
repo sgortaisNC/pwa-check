@@ -86,7 +86,19 @@ export class NotificationService {
 	}
 
 	public isSupported(): boolean {
-		return typeof window !== 'undefined' && 'Notification' in window;
+		if (typeof window === 'undefined') return false;
+		// Vérifier si c'est iOS/Safari qui a un support limité
+		const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+		              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+		// iOS Safari ne supporte pas l'API Notification standard
+		if (isIOS) return false;
+		return 'Notification' in window;
+	}
+
+	public isIOS(): boolean {
+		if (typeof window === 'undefined') return false;
+		return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+		       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 	}
 
 	public getContextInfo(): { isSecure: boolean; protocol: string; hostname: string } {

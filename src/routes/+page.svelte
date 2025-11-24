@@ -5,6 +5,7 @@
 	let notificationService: NotificationService | null = null;
 	let permission: NotificationPermission = 'default';
 	let isSupported = false;
+	let isIOS = false;
 	let isLoading = false;
 	let message = '';
 	let contextInfo = { isSecure: false, protocol: '', hostname: '' };
@@ -21,6 +22,7 @@
 			}
 			notificationService = NotificationService.getInstance();
 			isSupported = notificationService.isSupported();
+			isIOS = notificationService.isIOS();
 			permission = notificationService.getPermission();
 			contextInfo = notificationService.getContextInfo();
 		} catch (e) {
@@ -101,8 +103,18 @@
 			</div>
 		{:else if notificationService}
 			{#if !isSupported}
-				<div class="alert error">
-					⚠️ Les notifications ne sont pas supportées dans ce navigateur.
+				<div class="alert warning">
+					{#if isIOS}
+						<strong>📱 Limitations iOS/Safari</strong><br />
+						Safari sur iOS ne supporte pas l'API Notification standard utilisée par cette application.<br />
+						<br />
+						<strong>Alternatives :</strong><br />
+						• Utilisez Chrome ou Firefox sur iOS pour tester les notifications<br />
+						• Les notifications push web nécessitent une configuration serveur spécifique pour iOS<br />
+						• Pour une expérience complète, testez sur Android ou desktop
+					{:else}
+						⚠️ Les notifications ne sont pas supportées dans ce navigateur.
+					{/if}
 				</div>
 			{:else if !contextInfo.isSecure}
 				<div class="alert warning">
