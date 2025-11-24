@@ -57,7 +57,6 @@ export default defineConfig({
 						}
 					}
 				],
-				// Gérer les événements push dans le service worker généré
 				skipWaiting: true,
 				clientsClaim: true
 			},

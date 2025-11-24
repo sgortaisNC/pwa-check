@@ -395,12 +395,6 @@
 		border-color: rgba(239, 68, 68, 0.3);
 	}
 
-	.message.warning {
-		background: rgba(255, 193, 7, 0.2);
-		border-color: rgba(255, 193, 7, 0.3);
-		color: #ffc107;
-	}
-
 	.notification-form {
 		display: flex;
 		flex-direction: column;
