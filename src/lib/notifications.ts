@@ -74,8 +74,15 @@ export class NotificationService {
 		// Utiliser le service worker si disponible (recommandé pour PWA)
 		if ('serviceWorker' in navigator) {
 			try {
-				const registration = await navigator.serviceWorker.ready;
-				if (!registration) {
+				// Timeout de 3 secondes pour éviter que ça bloque indéfiniment
+				const registration = await Promise.race([
+					navigator.serviceWorker.ready,
+					new Promise<never>((_, reject) => 
+						setTimeout(() => reject(new Error('Timeout service worker')), 3000)
+					)
+				]);
+				
+				if (!registration || typeof registration.showNotification !== 'function') {
 					throw new Error('Service worker non disponible');
 				}
 				
